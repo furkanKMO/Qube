@@ -4,16 +4,26 @@ public class PushableObject : MonoBehaviour
 {
     public Vector2Int gridPos;
     private bool isStuck = false;
+    private Vector2Int lastValidPosition;
+    private string uniqueName;
+
     void Awake()
     {
+        uniqueName = "Object"+Random.Range(0, 99999).ToString();
         if (GridManager.Instance != null)
         {
             gridPos = GridManager.Instance.WorldToGrid(transform.position);
+            lastValidPosition = gridPos; // Store initial valid position
         }
         else
         {
             Debug.LogError("GridManager Instance is missing! Make sure GridManager exists in the scene.");
         }
+    }
+    public void RecordMovement()
+    {
+        //  Track object movement
+        MovementHistory.Instance.AddMovement(uniqueName, gridPos);
     }
     public void TryMove(Vector2Int direction)
     {
@@ -23,7 +33,7 @@ public class PushableObject : MonoBehaviour
 
         if (GridManager.Instance.IsMoveable(newPos, true)) //  Pass 'true' to allow objects
         {
-           
+            lastValidPosition = gridPos; // Store initial valid position
             GridManager.Instance.MoveObject(gridPos, newPos);
            
             StartCoroutine(SmoothMove(GridManager.Instance.GetWorldPosition(newPos)));
@@ -36,6 +46,15 @@ public class PushableObject : MonoBehaviour
             }
             //  Check if object moved into Water
             checkWater(newPos);
+            if (GridManager.Instance.IsSinkingBlock(newPos))
+            {
+                Tile tile = GridManager.Instance.GetTileAt(newPos);
+                if (tile != null)
+                {
+                    tile.StartSinking();
+                }
+
+            }
         }
         
     }
@@ -95,6 +114,13 @@ public class PushableObject : MonoBehaviour
                 GridManager.Instance.MarkTileWithSunkenObject(newPos, true); //  Mark this specific tile
             }
         }
+    }
+    //  Move back to last valid position when tile sinks
+    public void RevertToLastPosition()
+    {
+        GridManager.Instance.MoveObject(gridPos, lastValidPosition);
+        StartCoroutine(SmoothMove(GridManager.Instance.GetWorldPosition(lastValidPosition)));
+        gridPos = lastValidPosition;
     }
     public bool IsStuck() => isStuck;// Allow GridManager to check if object is stuck
 }

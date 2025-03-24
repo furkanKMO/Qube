@@ -47,6 +47,7 @@ public class GridManager : MonoBehaviour
             }
         }
     }
+    
     /// <summary>
     /// Marks a specific water tile as having a sunken object.
     /// </summary>
@@ -139,6 +140,36 @@ public class GridManager : MonoBehaviour
         }
         return false;
     }
+    public bool IsSinkingBlock(Vector2Int pos)
+    {
+        if (gridData.ContainsKey(pos) && gridData[pos].Ground.TryGetComponent(out Tile tile))
+        {
+            return tile.tileType == TileType.SinkingBlock;
+        }
+        return false;
+    }
+
+    //  Revert objects & players if they're on a sinking tile
+    public void RevertObjectsOnTile(Vector2Int pos)
+    {
+        GameObject obj = GetObjectAt(pos);
+        if (obj != null && obj.TryGetComponent(out PushableObject pushable))
+        {
+            pushable.RevertToLastPosition(); // Move object back
+        }
+
+        if (IsPlayerAt(pos))
+        {
+            PlayerController.Instance.RevertToLastPosition(); // Move player back
+        }
+    }
+
+    //  Check if player is at this position
+    public bool IsPlayerAt(Vector2Int pos)
+    {
+        return PlayerController.Instance.gridPos == pos;
+    }
+
 
     /// <summary>
     /// Converts a world position to a grid position.
@@ -165,6 +196,17 @@ public class GridManager : MonoBehaviour
     public GameObject GetObjectAt(Vector2Int gridPos)
     {
         return gridData.ContainsKey(gridPos) ? gridData[gridPos].Object : null;
+    }
+    /// <summary>
+    /// Returns the Tile component at the given grid position.
+    /// </summary>
+    public Tile GetTileAt(Vector2Int pos)
+    {
+        if (gridData.ContainsKey(pos) && gridData[pos].Ground != null)
+        {
+            return gridData[pos].Ground.GetComponent<Tile>();
+        }
+        return null; //  Returns null if no tile is found
     }
 
     /// <summary>
